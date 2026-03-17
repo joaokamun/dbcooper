@@ -1,40 +1,35 @@
 import type { TableDataResponse } from "./tableData";
-import type { RedisKeyInfo, RedisKeyDetails } from "@/lib/tauri";
+import type {
+	ColumnInfo,
+	ForeignKeyInfo,
+	FunctionDefinition,
+	FunctionSummary,
+	RedisKeyDetails,
+	RedisKeyInfo,
+	SchemaOverview,
+	TableStructure,
+} from "@/lib/tauri";
 
-export type TabType = "table-data" | "table-structure" | "query" | "redis-query" | "schema-visualizer";
+export type {
+	ForeignKeyInfo,
+	FunctionDefinition,
+	FunctionSummary,
+	IndexInfo,
+	SchemaOverview,
+	TableWithStructure,
+} from "@/lib/tauri";
 
-export interface TableColumn {
-	name: string;
-	type: string;
-	nullable: boolean;
-	default: string | null;
-	primary_key: boolean;
-}
+export type TabType =
+	| "table-data"
+	| "table-structure"
+	| "query"
+	| "redis-query"
+	| "schema-visualizer"
+	| "function-definition";
 
-export interface TableStructureData {
-	columns: TableColumn[];
-	indexes: {
-		name: string;
-		columns: string[];
-		unique: boolean;
-		primary: boolean;
-	}[];
-	foreign_keys: ForeignKeyInfo[];
-}
+export type TableColumn = ColumnInfo;
 
-export interface ForeignKeyInfo {
-	name: string;
-	column: string;
-	references_table: string;
-	references_column: string;
-}
-
-export interface IndexInfo {
-	name: string;
-	columns: string[];
-	unique: boolean;
-	primary: boolean;
-}
+export type TableStructureData = TableStructure;
 
 interface BaseTab {
 	id: string;
@@ -101,20 +96,29 @@ export interface SchemaVisualizerTab extends BaseTab {
 	selectedTables: string[];
 }
 
-export interface SchemaOverview {
-	tables: TableWithStructure[];
+export interface FunctionDefinitionTab extends BaseTab {
+	type: "function-definition";
+	functionSummary: FunctionSummary;
+	definition: FunctionDefinition | null;
+	loading: boolean;
+	error: string | null;
 }
 
-export interface TableWithStructure {
-	schema: string;
-	name: string;
-	type: string;
-	columns: TableColumn[];
-	foreign_keys: ForeignKeyInfo[];
-	indexes: IndexInfo[];
-}
+export type Tab =
+	| TableDataTab
+	| TableStructureTab
+	| QueryTab
+	| RedisQueryTab
+	| SchemaVisualizerTab
+	| FunctionDefinitionTab;
 
-export type Tab = TableDataTab | TableStructureTab | QueryTab | RedisQueryTab | SchemaVisualizerTab;
+export function formatFunctionSignature(
+	summary: Pick<FunctionSummary, "schema" | "name" | "identity_args">,
+	includeSchema: boolean = true,
+): string {
+	const signature = `${summary.name}(${summary.identity_args})`;
+	return includeSchema ? `${summary.schema}.${signature}` : signature;
+}
 
 export function createTableDataTab(tableName: string): TableDataTab {
 	return {
@@ -191,5 +195,19 @@ export function createSchemaVisualizerTab(): SchemaVisualizerTab {
 		loading: false,
 		tableFilter: "",
 		selectedTables: [],
+	};
+}
+
+export function createFunctionDefinitionTab(
+	functionSummary: FunctionSummary,
+): FunctionDefinitionTab {
+	return {
+		id: `function-definition-${functionSummary.schema}-${functionSummary.name}-${functionSummary.identity_args}-${Date.now()}`,
+		type: "function-definition",
+		title: formatFunctionSignature(functionSummary, false),
+		functionSummary,
+		definition: null,
+		loading: false,
+		error: null,
 	};
 }
