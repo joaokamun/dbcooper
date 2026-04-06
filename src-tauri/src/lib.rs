@@ -148,12 +148,13 @@ pub fn run() {
                 .expect("Failed to initialize database");
             app.manage(pool.clone());
 
-            // Initialize connection pool manager
-            app.manage(PoolManager::new());
+            // Initialize connection pool manager (shared between Tauri and MCP)
+            let pool_manager = Arc::new(PoolManager::new());
+            app.manage(pool_manager.clone());
 
             // Start embedded MCP HTTP server
             let mcp_pool = pool;
-            let mcp_pool_manager = Arc::new(PoolManager::new());
+            let mcp_pool_manager = pool_manager;
             tauri::async_runtime::spawn(async move {
                 match mcp::server::start_mcp_server(mcp_pool, mcp_pool_manager, true).await {
                     Ok(handle) => {
